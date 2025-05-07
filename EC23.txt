@@ -1,0 +1,438 @@
+AWS EC2
+
+Day1.
+
+1.to run the application on local machine the previous ML model and relevant file run app.py locally.
+2.a workspace is needed or a virtual environment.
+3.install requirements.txt.
+4.Finally run app.py
+
+day2.
+
+If we want to do in a continuous manner, if at all any change happens in app.py every time we have to start server and run.
+this can be possible with Jenkins  and this procedure is done with CICD pipelines using Jenkins.
+
+day3.
+
+now we want to deploy it on live on cloud.as per yesterdays session we did on local machines using Jenkins.
+for this live we need cloud that is AWS server. And Here we use EC2 instance.
+
+On instance we have to install
+1.python 
+2.Java
+3.Jenkins 
+4.download from GIT SCM then
+5.Requirements.txt for packages and then 
+6.run app.py and 
+7.containerize using Docker and Dockerize.
+But in real its a tedious task to boost it we are going to combine all with EC2 and run one after another.
+
+
+GOto AWS account EC2 instance create it.
+click on launch instances.
+1.provide a name to it 
+2. Select Linux, 
+3.Select t2.medium,  
+4.create new key pair, 
+5.name it and select RSA ,
+6.Specify the .pem file location and it is very imp save in downloadsr any other location u remember.
+then select create security group and allow HTTP traffic from internet.under configure storage give 12 gb.now got advanced details
+now
+sudo apt update -y
+sudo apt install openjdk-17-jdk-headless -y
+sudo apt install python -y
+sudo apt install python3.12-venv -y
+sudo apt install python3-pip
+sudo apt install docker.io -y
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install jenkins -y
+sudo systemctl start jenkins
+sudo systemctl enable Jenkins
+sudo chmod 777 /var/run/docker.sock
+
+paste this code or
+https://github.com/htitads1/22Apr/blob/main/boot.txt access this file.
+clik on launch instances
+goto instance its there.
+
+(to create an instance on amazon Linux instance the link 
+https://medium.com/@oladejit3/how-to-install-jenkins-on-aws-ec2-instance-4ec700f68948
+)
+
+commands to install Jenkins on ec2 instance
+1.sudo yum upgrade
+2.sudo yum update
+3.to install java on ec2 instance 
+sudo yum install java-17-amazon-corretto -y
+4.check the version of java
+5.Now install Jenkins on ec2 instance
+sudo wget -O /etc/yum.repos.d/jenkins.repo \
+    https://pkg.jenkins.io/redhat-stable/jenkins.repo
+6.Import the Jenkins GPG key by adding the following command
+(GPG stands for GNU Privacy Guard, an implementation of public key cryptography, which can be used both for the more standard operations of encryption keys (encrypt/decrypt), and for message verification via signature.)
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+7.Now install Jenkins on ec2
+sudo yum install jenkins -y
+8.to enable Jenkins
+sudo systemctl enable Jenkins
+9.to start Jenkins
+10.to know the status of Jenkins
+sudo systemctl status jenkins
+
+
+
+
+
+Now we have install Jenkins
+1.clikc on instance id it gives you a public ip address
+2.select the public Ip addresss as 35.175.152.153 and add :8080 to that as 35.175.152.153:8080
+if not open got security tab and open security groups.clik on inbound rules and edit inbound rules
+clik on add ruels custom TCP add 8080 anywhere ipv4
+it opens Jenkins
+Initialadminpassword resides in above path as /var/lib/Jenkins/secrets
+goto instance click onconnect now at  ssh copy the command
+paste it at command prompt at cmd
+ssh -i "kp1.pem" ubuntu@ec2-35-175-152-153.compute-1.amazonaws.com
+now we get the access to ec2 instance
+as ubuntu@ip-17....
+then
+sudo su
+then u have command prompt as #
+now to get adminpassword copy this address /var/lib/Jenkins/secrets
+
+now type cat initalAdminPassword
+
+you get the password
+copy it and paste it. clik on install suggested plugins
+now give username and password email and all
+and everything is ready
+start using Jenkins
+now our Jenkins on ec2 instance is opened successfully.
+
+to carry the above mentioned steps we have to create a pipeline
+
+so on Jenkins create a new pipeline give name
+
+now in setting no need to change anything rather we need to add a pipeline script
+
+got 22apr repo and copy contents of Jenkins_aws script and paste it
+
+pipeline {
+    agent any
+
+environment {
+    venvDir="";
+}
+    stages {
+       
+        stage("Check"){
+            steps{
+                git branch:"main",url:"https://github.com/htitads1/uj_ml.git"
+            }
+        }
+        stage('Create Virtual Environment') {
+            steps {
+                script {
+                    // Define the path where you want to create the virtual environment
+                     venvDir = "${WORKSPACE}/venv"
+
+                    // Execute the shell command to create the virtual environment
+                   // sh "virtualenv ${venvDir}"
+                    sh "python3 -m venv ${venvDir}"
+                }
+            }
+        }
+
+        stage('Activate Virtual Environment') {
+            steps {
+                script {
+                    // Activate the virtual environment
+                    def activateScript = "${venvDir}/bin/activate"
+                    if (fileExists(activateScript)) {
+                        // Execute the activate script to activate the virtual environment
+                        sh ". ${activateScript}"
+                    } else {
+                        error "Virtual environment activation script not found."
+                    }
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    // Install required dependencies within the virtual environment
+                    sh "${venvDir}/bin/pip install -r ${WORKSPACE}/requirements.txt"
+                }
+            }
+        }
+
+ stage('RUN') {
+            steps {
+                script {
+                    // Install required dependencies within the virtual environment
+                   timeout(time:2,unit:"MINUTES"){
+                        sh "${venvDir}/bin/python3  ${WORKSPACE}/app.py"
+                   }
+                }
+            }
+        }
+        // Add more stages as needed
+    }
+}
+
+https://github.com/htitads1/22Apr/blob/main/jenkins_aws_script
+
+[ to run this code on Jenkins Pipeline we need to install
+1.Python
+2.git and 
+3.set the path to git on configuration
+
+1.to install python
+
+https://medium.com/@shanmorton/install-python-and-boto3-on-an-aws-ec2-instance-e8e40d92160f
+
+the above is the path to read commands
+
+   the following commands used to install python
+     1.sudo yum update
+     2.sudo yum install -y python3-pip python3 python3-setuptools
+
+2.to install git
+
+(1. Connect to the EC2 Instance:
+Use SSH with your private key (e.g., ssh -i /path/to/your-key.pem ec2-user@your-ec2-ip-address). )
+
+2. Install Git:
+For Amazon Linux/CentOS:
+
+sudo yum install git -y
+
+(For Ubuntu:
+sudo apt-get update
+sudo apt-get install git)
+
+3.to configure git we have to use command
+   1.open connect on ec2 instance
+   2.at $ prompt type
+     whereis git
+
+the above command gives you path of git
+
+   3. now goto manage Jenkins-->tools--> git installations
+      ---name -Default
+       path to git executable as /usr/bin/git (whcich is given as output of where is git command) 
+
+(now run the file with ec2 instance public IP address followed by 9000)
+
+
+
+
+workspace is place in Jenkins and created venv created there. why because we are going the use Docker.
+without venv Ec2 is giving issues.so we have started this.
+we just activate it. this thing we can see in first stage of code.
+in second stage install dependencies. with requirements.txt
+in third stage navigating dir and run app.py
+
+This is just a pipelining the is working thing without docker in Jenkins.
+
+now save it and then run
+goto console output
+its running
+open URL it wont work bcose it works on local instance as(http://12.0.0.1:9000)
+even if u give public IP address from Ec2 also it wont works https://35.175.152.153:9000/
+
+bcoze of in-bound rules
+go to security of ec2 instance
+add rule custom TCp and add port number 9000
+now https://35.175.152.153:9000/ we used it public IP
+it can be accessed any where even from mobiles also it will work we can access any where the application.
+
+
+now we need to talk about docker but before that...before that..
+goto code base and index.html
+like if at all any changes in GitHub file called index.html for example and so any change is ther it should be reflected to user.
+goto Jenkins and configure the pipeline file to reflect the changes in codebase-- to do that GitHub webhook option on Jenkins
+then goto webhooks add webhook
+in the payloadURL add http://jenkins URL/github-webhook/
+copy and paste Jenkins URL from there...
+so go in templates index.html for example add some change in code .
+now make second change in code ..templates index.html change some thing it reflects...
+
+1.(we need to install docker on amazon Linux ec2 instance begore execute the following code.
+https://www.geeksforgeeks.org/how-to-install-docker-on-amazon-linux/
+the above is the link here to access respective commands)
+2.sudo chmod 777 /var/run/docker.sock
+run the above command to run the docker on Jenkins using the following code..
+
+commands to install docker on ec2 Linux instance
+sudo yum install -y docker
+sudo yum update -y
+sudo systemctl enable docker
+sudo systemctl start docker
+docker --version
+
+
+Now with Docker
+
+we created SCM ,installed modules , run python app.py on EC2 instance now I want to run this on Mac what if I use different version of Linux or another version of Ubuntu in such case we go for Containerization..it creates everything on its own...depending upon host requirements 
+so docker image contains all the above steps, and this image file is portable on any where we can run it where ever we want to run.
+so we need all the things what we did is to build an image.
+execute this image on host machine we get a container...and this can have all the procedure to explain well...
+so docker helps to prepare an image and to run the container
+
+so now got ec2instance connect
+$ docker ps
+docker ps -a
+docker images
+  
+
+https://github.com/htitads1/uj_ml
+got this public repo
+
+see docker file
+ COPY . . means copying whole thing
+but 9000 is the port of host machine
+
+
+
+so Jenkins file is available on Jenkins AWS Docker pipeline..
+
+
+pipeline{
+    agent any
+   
+   
+    stages{
+       
+        stage("CheckOiut"){
+            steps{
+                git branch:'main',url:"https://github.com/htitads1/uj_ml.git"
+            }
+        }
+       
+        stage("CleanUP"){
+           
+            steps {
+               
+                sh "docker rm loanapp -f"
+            }
+        }
+       
+        stage('Build'){
+           
+            steps{
+                 
+               
+              sh 'docker build -t loanapp .'
+             
+            }
+        }
+       
+       
+      stage("run"){
+          steps {
+         sh "docker run -itd -p 5000:9000 --name loanapp loanapp"
+            echo "Done"
+          }
+      }
+    }
+}
+
+
+https://github.com/htitads1/22Apr/blob/main/jenkins_aws_docker
+this is the path
+
+
+paste the above code and run it...
+in console output just see layers are creating and everything is happening is happening on that container.
+It doent matter who is your host it may be mac /windows /ubuntu etc
+but its very useful in such case.
+
+so now we need to run on 5000 port for this got ec2 instance security add rule custom  there add 5000
+
+(why 5000 meand in the Jenkins aws docker file at Run stage we gave port number as 5000 so it should required to change)
+
+
+
+now goto sudo file as mentioned above
+copy last line and run
+
+
+what we did
+we nave ec2 instance on the top docker and with in that we run app.py
+
+who is responsible to do all is Jenkins
+Jenkins is sole responsible for alla to run.
+
+now goro $docker ps     (on Ec2 instance)
+docker ps -a 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
