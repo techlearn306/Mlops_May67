@@ -1,0 +1,13 @@
+githubwebhook on aws ec2 instance Jenkins
+
+1.copy GitHub repo
+2.open Jenkins free style project
+3.in sourcecodemgmt selet git and provide git hub repo
+4.under buildtriggers select githubhook trigger for gitscm polling
+5.now goto GitHub settings add webhook
+6.in payload url add Jenkins address with aws ip address at the end add 8080/github-webhook/
+7.content as application/json
+8.click on add webhook
+now webhook is created with specified URL
+now got to free style build it
+9.add any changes files od add any files ot repo of git hub that triggers in jenkins
