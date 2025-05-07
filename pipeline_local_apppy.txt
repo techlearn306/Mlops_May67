@@ -1,0 +1,38 @@
+ pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch:"main", url :"https://github.com/techlearn306/mybootcamp.git"
+            }
+        }
+       
+        stage('setup') {
+            steps {
+                bat "pip install -r requirements.txt"
+            }
+        }
+       
+        stage('run') {
+            steps {
+                script{
+                try 
+                {
+                        timeout(time:3,unit:'MINUTES'){
+                        bat "python app.py"
+                        echo 'Succeeded!'
+                        }
+                } 
+                catch (err) 
+                {
+                        echo "Failed: ${err}"
+                } 
+                finally {
+                    echo "This is the last stage"
+                    }
+                }
+                }
+        }
+    }
+}
